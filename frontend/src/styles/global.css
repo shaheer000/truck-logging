@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #f4f6f9;
+  --surface-3: #e9ecf2;
+  --border: #d1d5db;
+  --border-strong: #9ca3af;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+}
+
+.dark {
+  --bg: #0c0f17;
+  --bg-subtle: #131720;
+  --surface: #161b27;
+  --surface-2: #1c2332;
+  --surface-3: #232c3e;
+  --border: #2a3348;
+  --border-strong: #3d4f6b;
+  --text-primary: #f9fafb;
+  --text-secondary: #e5e7eb;
+  --text-muted: #9ca3af;
+  --text-faint: #6b7280;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: "Geist", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular numbers everywhere mono is used. */
+.font-mono {
+  font-feature-settings: "tnum" 1;
+}
+
+/* 3px focus ring on interactive elements per DESIGN.md. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[role="slider"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.4);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2
+      text-sm font-medium transition-all duration-micro min-h-[44px]
+      disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-600
+      hover:-translate-y-px hover:shadow-md;
+  }
+  .btn-accent {
+    @apply btn bg-accent text-white hover:bg-accent-600
+      hover:-translate-y-px hover:shadow-md;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent border border-border text-text-secondary
+      hover:bg-surface-2;
+  }
+  .card {
+    @apply bg-surface border border-border rounded-lg shadow-sm p-5;
+  }
+  .input {
+    @apply w-full min-h-[44px] rounded-md border-[1.5px] border-border bg-surface
+      px-4 text-sm text-text-primary placeholder:text-text-faint
+      focus:border-primary focus:outline-none;
+  }
+  .input:focus {
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15);
+  }
+  .overline {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted;
+  }
+}
+
+/* Leaflet marker fix when bundling. */
+.leaflet-container {
+  font-family: "Geist", sans-serif;
+}

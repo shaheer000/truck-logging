@@ -1,0 +1,29 @@
+@media print {
+  .day-tab-bar,
+  .export-bar,
+  .day-navigation,
+  .results-page,
+  .wizard-page,
+  .app-nav,
+  nav,
+  header {
+    display: none !important;
+  }
+
+  .log-sheet-canvas {
+    page-break-after: always;
+    width: 100%;
+    height: auto;
+  }
+
+  svg {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+}
