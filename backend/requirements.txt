@@ -4,3 +4,5 @@ django-cors-headers==4.6.0
 requests==2.32.3
 python-decouple==3.8
 psycopg2-binary==2.9.10
+gunicorn==23.0.0
+whitenoise==6.8.2

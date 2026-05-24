@@ -1,7 +1,12 @@
 import axios from "axios";
 
+// In dev, Vite proxies "/api" to localhost:8000 (see vite.config.js).
+// In prod (Vercel build), set VITE_API_BASE_URL to your EC2 backend, e.g.
+// `https://api.example.com/api`. Falls back to "/api" so dev keeps working.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
+
 const client = axios.create({
-  baseURL: "/api",
+  baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
 });
 
