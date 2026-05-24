@@ -21,6 +21,8 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
+RUN chmod +x /app/entrypoint.sh
+
 # Drop privileges.
 RUN groupadd -r app && useradd -r -g app app \
     && mkdir -p /app/staticfiles \
@@ -29,8 +31,6 @@ USER app
 
 EXPOSE 8000
 
-# Entrypoint runs migrations + collectstatic before starting gunicorn.
-COPY --chown=app:app entrypoint.sh /app/entrypoint.sh
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["gunicorn", "config.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
