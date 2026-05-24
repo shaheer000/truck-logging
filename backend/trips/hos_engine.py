@@ -100,7 +100,15 @@ def _insert_34hr_restart(state, location, lat, lon):
     state.drive_since_break = 0.0
 
 
-def _drive_segment(state, start_coord, end_coord, dest_name, total_miles, purpose):
+def _drive_segment(state, start_coord, end_coord, dest_name, total_miles, purpose,
+                   total_duration_hrs=None):
+    # Drive at the route's effective speed (miles / route-duration) so the sum
+    # of DRIVING events equals the routing service's total duration.
+    if total_duration_hrs and total_duration_hrs > 0.01 and total_miles > 0.01:
+        effective_mph = total_miles / total_duration_hrs
+    else:
+        effective_mph = AVG_TRUCK_SPEED_MPH
+
     miles_remaining = total_miles
     guard = 0
     while miles_remaining > 0.01:
@@ -131,9 +139,9 @@ def _drive_segment(state, start_coord, end_coord, dest_name, total_miles, purpos
         hours_before_window = MAX_DUTY_WINDOW - state.shift_duty_hrs
         hours_before_drive = MAX_DRIVING_PER_SHIFT - state.shift_drive_hrs
         hours_before_break = BREAK_TRIGGER_HOURS - state.drive_since_break
-        hours_before_fuel = (FUEL_INTERVAL_MILES - state.miles_since_fuel) / AVG_TRUCK_SPEED_MPH
+        hours_before_fuel = (FUEL_INTERVAL_MILES - state.miles_since_fuel) / effective_mph
         hours_before_cycle = CYCLE_LIMIT - state.cycle_used
-        hours_to_dest = miles_remaining / AVG_TRUCK_SPEED_MPH
+        hours_to_dest = miles_remaining / effective_mph
 
         max_drive = min(
             hours_before_window,
@@ -145,8 +153,6 @@ def _drive_segment(state, start_coord, end_coord, dest_name, total_miles, purpos
         )
 
         if max_drive <= 0.01:
-            # No driving headroom. Reset whichever limit is binding so the next
-            # loop pass can make progress.
             if state.cycle_used >= CYCLE_LIMIT - 0.01:
                 _insert_34hr_restart(state, "Restart location", pos["lat"], pos["lon"])
             elif state.drive_since_break >= BREAK_TRIGGER_HOURS - 0.01:
@@ -157,7 +163,7 @@ def _drive_segment(state, start_coord, end_coord, dest_name, total_miles, purpos
                 _insert_10hr_break(state, "Rest area", pos["lat"], pos["lon"])
             continue
 
-        miles_driven = max_drive * AVG_TRUCK_SPEED_MPH
+        miles_driven = max_drive * effective_mph
         _add(state, DRIVING, f"En route to {dest_name}", pos["lat"], pos["lon"],
              max_drive, purpose, miles=miles_driven)
 
@@ -169,12 +175,16 @@ def _drive_segment(state, start_coord, end_coord, dest_name, total_miles, purpos
         miles_remaining -= miles_driven
 
 
-def calculate_trip(trip, leg_distances):
+def calculate_trip(trip, leg_distances, leg_durations=None):
     """Run the HOS schedule.
 
     `trip` is a TripInput. `leg_distances` is {current_to_pickup, pickup_to_dropoff}
-    in miles (computed by the caller from the routing service).
+    in miles (computed by the caller from the routing service). `leg_durations`
+    (optional) is the matching dict in hours — when supplied, DRIVING events sum
+    to those durations exactly, so the printed log's "Driving" total matches the
+    actual route time rather than a constant 55 mph estimate.
     """
+    leg_durations = leg_durations or {}
     start = trip.start_time or datetime.now().replace(
         hour=6, minute=0, second=0, microsecond=0
     )
@@ -192,7 +202,8 @@ def calculate_trip(trip, leg_distances):
 
     # Current -> Pickup
     _drive_segment(state, cur, pick, trip.pickup["address"],
-                   leg_distances["current_to_pickup"], "En route to pickup")
+                   leg_distances["current_to_pickup"], "En route to pickup",
+                   total_duration_hrs=leg_durations.get("current_to_pickup"))
 
     # Pickup stop
     _add(state, ON_DUTY_ND, trip.pickup["address"], pick[0], pick[1],
@@ -202,7 +213,8 @@ def calculate_trip(trip, leg_distances):
 
     # Pickup -> Dropoff
     _drive_segment(state, pick, drop, trip.dropoff["address"],
-                   leg_distances["pickup_to_dropoff"], "En route to dropoff")
+                   leg_distances["pickup_to_dropoff"], "En route to dropoff",
+                   total_duration_hrs=leg_durations.get("pickup_to_dropoff"))
 
     # Dropoff stop
     _add(state, ON_DUTY_ND, trip.dropoff["address"], drop[0], drop[1],

@@ -96,3 +96,13 @@ input:focus-visible,
 .leaflet-container {
   font-family: "Geist", sans-serif;
 }
+/* Keep Leaflet panes below the location-search dropdown so suggestions never
+   render behind the map. Leaflet's defaults are 200-700; we cap them at 30. */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 30 !important;
+}
+.leaflet-container {
+  z-index: 0;
+}

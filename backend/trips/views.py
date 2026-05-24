@@ -107,12 +107,33 @@ class TripCalculationView(APIView):
             cycle_used_hours=data["cycle_used_hours"],
             start_time=datetime.now().replace(hour=6, minute=0, second=0, microsecond=0),
         )
-        events = hos_engine.calculate_trip(trip_input, {
-            "current_to_pickup": leg1["distance_miles"],
-            "pickup_to_dropoff": leg2["distance_miles"],
-        })
+        events = hos_engine.calculate_trip(
+            trip_input,
+            {
+                "current_to_pickup": leg1["distance_miles"],
+                "pickup_to_dropoff": leg2["distance_miles"],
+            },
+            leg_durations={
+                "current_to_pickup": leg1["duration_hrs"],
+                "pickup_to_dropoff": leg2["duration_hrs"],
+            },
+        )
 
-        sheets = log_renderer.generate_log_sheets(events)
+        profile = getattr(request.user, "driver_profile", None)
+        log_header = {
+            "carrier": (profile.carrier if profile and profile.carrier else "TruckLog Pro"),
+            "driver_name": (profile.full_name if profile else request.user.username),
+            "co_driver": data.get("co_driver", ""),
+            "truck_number": data.get("truck_number", ""),
+            "trailer_number": data.get("trailer_number", ""),
+            "license_plate": data.get("license_plate", ""),
+            "bol_number": data.get("bol_number", ""),
+            "shipper": data.get("shipper", ""),
+            "commodity": data.get("commodity", ""),
+            "main_office_address": data.get("main_office_address", ""),
+            "home_terminal_address": data.get("home_terminal_address", ""),
+        }
+        sheets = log_renderer.generate_log_sheets(events, header=log_header)
         stops = log_renderer.build_stops(events, trip_input)
 
         total_hrs = round(
@@ -159,6 +180,7 @@ class TripCalculationView(APIView):
                     events=sheet["events"],
                     totals=sheet["totals"],
                     recap=sheet["recap"],
+                    header=sheet.get("header", {}),
                 )
                 for sheet in sheets
             ])
@@ -213,3 +235,63 @@ class TripHistoryView(APIView):
         if request.query_params.get("status") == "confirmed":
             qs = qs.filter(status=Trip.STATUS_CONFIRMED)
         return Response({"trips": TripHistorySerializer(qs, many=True).data})
+
+
+class TripEditEventsView(APIView):
+    """Replace a trip's log events with a driver-edited version and rebuild
+    the daily log sheets. Driving events are not re-routed; the user owns the
+    edit and we just re-render the sheets so totals/recap stay consistent."""
+
+    def post(self, request, pk):
+        trip = _owned_trip_or_none(request, pk)
+        if trip is None:
+            return Response(
+                {"error": "not_found", "detail": "Trip not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        sheets_payload = request.data.get("sheets")
+        if not isinstance(sheets_payload, list) or not sheets_payload:
+            return Response(
+                {"error": "validation_error", "detail": "Missing edited sheets."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        edited = {}
+        header = {}
+        for sheet in sheets_payload:
+            date_iso = sheet.get("date")
+            events = sheet.get("events") or []
+            if not date_iso:
+                continue
+            edited[date_iso] = events
+            if not header and sheet.get("header"):
+                header = sheet["header"]
+
+        try:
+            flat_events = log_renderer.events_from_edited(edited, base_date=None)
+        except (KeyError, ValueError) as exc:
+            return Response(
+                {"error": "validation_error", "detail": f"Bad event format: {exc}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        new_sheets = log_renderer.generate_log_sheets(flat_events, header=header)
+
+        with transaction.atomic():
+            trip.log_sheets.all().delete()
+            LogSheet.objects.bulk_create([
+                LogSheet(
+                    trip=trip,
+                    day_number=s["day_number"],
+                    date=s["date"],
+                    total_miles=s["total_miles"],
+                    events=s["events"],
+                    totals=s["totals"],
+                    recap=s["recap"],
+                    header=s.get("header", {}),
+                )
+                for s in new_sheets
+            ])
+
+        trip.refresh_from_db()
+        return Response(TripOutputSerializer(trip).data, status=status.HTTP_200_OK)

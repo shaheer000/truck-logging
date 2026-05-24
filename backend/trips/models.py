@@ -97,6 +97,7 @@ class LogSheet(models.Model):
     events = models.JSONField(default=list)
     totals = models.JSONField(default=dict)
     recap = models.JSONField(default=dict)
+    header = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ["day_number"]

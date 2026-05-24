@@ -8,6 +8,7 @@ from .views import (
     TripCalculationView,
     TripConfirmView,
     TripDetailView,
+    TripEditEventsView,
     TripHistoryView,
 )
 
@@ -20,4 +21,5 @@ urlpatterns = [
     path("trip/<uuid:pk>/", TripDetailView.as_view(), name="trip-detail"),
     path("trip/<uuid:pk>/logs/", LogSheetsView.as_view(), name="trip-logs"),
     path("trip/<uuid:pk>/confirm/", TripConfirmView.as_view(), name="trip-confirm"),
+    path("trip/<uuid:pk>/edit-events/", TripEditEventsView.as_view(), name="trip-edit-events"),
 ]

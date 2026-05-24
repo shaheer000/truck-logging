@@ -96,7 +96,8 @@ export default function LocationSearchBox({
       )}
 
       {open && (query.trim().length >= 3) && (
-        <ul className="absolute z-50 mt-1 w-full bg-surface border border-border rounded-md shadow-lg overflow-hidden">
+        <ul className="absolute mt-1 w-full bg-surface border border-border rounded-md shadow-lg overflow-hidden"
+            style={{ zIndex: 1100 }}>
           {loading && <li className="px-4 py-3 text-sm text-text-muted">Searching…</li>}
           {!loading && suggestions.length === 0 && (
             <li className="px-4 py-3 text-sm text-text-muted">No matches found.</li>

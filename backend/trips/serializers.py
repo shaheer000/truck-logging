@@ -62,6 +62,17 @@ class TripInputSerializer(serializers.Serializer):
     pickup_location = LocationSerializer()
     dropoff_location = LocationSerializer()
     cycle_used_hours = serializers.FloatField(min_value=0, max_value=70)
+    # Optional log-sheet header fields. Mirror the FMCSA Driver's Daily Log form
+    # so the printed sheet has carrier, driver, vehicle, and shipping context.
+    co_driver = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    truck_number = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    trailer_number = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    license_plate = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    bol_number = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    shipper = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    commodity = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    main_office_address = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    home_terminal_address = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
 class StopSerializer(serializers.ModelSerializer):
@@ -80,7 +91,7 @@ class StopSerializer(serializers.ModelSerializer):
 class LogSheetSerializer(serializers.ModelSerializer):
     class Meta:
         model = LogSheet
-        fields = ["day_number", "date", "total_miles", "events", "totals", "recap"]
+        fields = ["day_number", "date", "total_miles", "events", "totals", "recap", "header"]
 
 
 class TripOutputSerializer(serializers.ModelSerializer):

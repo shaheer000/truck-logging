@@ -1,7 +1,68 @@
 """Transform a flat event stream into daily log sheets and a stop list."""
+from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 
 from .hos_engine import DRIVING, OFF_DUTY, ON_DUTY_ND, SLEEPER_BERTH
+
+
+@dataclass
+class _SimpleEvent:
+    """Lightweight event used when regenerating logs from edited JSON.
+
+    Mirrors `hos_engine.Event` enough for `generate_log_sheets` / `build_stops`
+    to consume without dragging the full HOS scheduler back into the picture.
+    """
+    status: str
+    start_time: datetime
+    duration_hrs: float
+    location: str
+    lat: float
+    lon: float
+    remarks: str
+    miles: float = 0.0
+
+    @property
+    def end_time(self):
+        return self.start_time + timedelta(hours=self.duration_hrs)
+
+
+def events_from_edited(edited, base_date):
+    """Build a flat list of `_SimpleEvent`s from user-edited day events.
+
+    `edited` is a dict keyed by ISO date with day-event lists. Each day-event
+    has status/start_time/end_time (HH:MM)/location/remarks (+ optional
+    lat/lon/miles). We anchor each day's events to its calendar date so the
+    downstream renderer can re-split them just like the original output.
+    """
+    events = []
+    for day_iso, day_events in sorted(edited.items()):
+        day = datetime.fromisoformat(day_iso).date()
+        for ev in day_events:
+            sh, sm = map(int, ev["start_time"].split(":"))
+            eh, em = map(int, ev["end_time"].split(":"))
+            start_dt = datetime.combine(day, time(sh, sm))
+            end_min = eh * 60 + em
+            start_min = sh * 60 + sm
+            # Treat 23:59 as end-of-day for visual rendering; if end < start
+            # the event wraps midnight.
+            if end_min <= start_min:
+                end_dt = datetime.combine(day + timedelta(days=1), time(0, 0))
+            else:
+                end_dt = datetime.combine(day, time(eh, em))
+            dur = (end_dt - start_dt).total_seconds() / 3600.0
+            if dur <= 0:
+                continue
+            events.append(_SimpleEvent(
+                status=ev["status"],
+                start_time=start_dt,
+                duration_hrs=dur,
+                location=ev.get("location", ""),
+                lat=ev.get("lat", 0.0),
+                lon=ev.get("lon", 0.0),
+                remarks=ev.get("remarks", ""),
+                miles=ev.get("miles", 0.0),
+            ))
+    return events
 
 # Map an event status + remark to a user-facing stop type / icon category.
 _STOP_TYPE_BY_REMARK = {
@@ -35,10 +96,16 @@ def _fmt(dt):
     return dt.strftime("%H:%M")
 
 
-def generate_log_sheets(events):
-    """Return a list of log-sheet dicts (one per calendar day)."""
+def generate_log_sheets(events, header=None):
+    """Return a list of log-sheet dicts (one per calendar day).
+
+    `header` (optional) is a dict of FMCSA log-sheet header fields (carrier,
+    driver_name, truck_number, bol_number, etc.) that gets attached to every
+    sheet so the canvas can render them on the printed form.
+    """
     if not events:
         return []
+    header = header or {}
 
     pieces = _split_at_midnight(events)
 
@@ -133,6 +200,7 @@ def generate_log_sheets(events):
             "events": day_events,
             "totals": totals,
             "recap": recap,
+            "header": header,
         })
 
     return sheets

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   calculateTrip,
   confirmTrip,
+  editTripEvents,
   login as apiLogin,
   register as apiRegister,
 } from "../api/tripApi";
@@ -40,6 +41,16 @@ const emptyInputs = {
   pickup: null,
   dropoff: null,
   cycleUsedHours: 0,
+  // Log-sheet header fields (optional, surfaced on the printed log).
+  coDriver: "",
+  truckNumber: "",
+  trailerNumber: "",
+  licensePlate: "",
+  bolNumber: "",
+  shipper: "",
+  commodity: "",
+  mainOfficeAddress: "",
+  homeTerminalAddress: "",
 };
 
 export const useTripStore = create((set, get) => ({
@@ -55,8 +66,11 @@ export const useTripStore = create((set, get) => ({
   setCycleHours: (hours) =>
     set((s) => ({ inputs: { ...s.inputs, cycleUsedHours: hours } })),
 
+  setLogField: (field, value) =>
+    set((s) => ({ inputs: { ...s.inputs, [field]: value } })),
+
   setStep: (step) => set({ currentStep: step }),
-  nextStep: () => set((s) => ({ currentStep: Math.min(4, s.currentStep + 1) })),
+  nextStep: () => set((s) => ({ currentStep: Math.min(5, s.currentStep + 1) })),
   prevStep: () => set((s) => ({ currentStep: Math.max(1, s.currentStep - 1) })),
 
   submitTrip: async () => {
@@ -79,6 +93,14 @@ export const useTripStore = create((set, get) => ({
     if (!trip) return;
     const res = await confirmTrip(trip.trip_id);
     set({ tripData: { ...trip, status: res.status } });
+  },
+
+  saveEditedSheets: async (sheets) => {
+    const trip = get().tripData;
+    if (!trip) return;
+    const updated = await editTripEvents(trip.trip_id, sheets);
+    set({ tripData: updated });
+    return updated;
   },
 
   clearTrip: () =>

@@ -6,7 +6,21 @@ import MiniMapPreview from "../components/wizard/MiniMapPreview";
 import CycleGauge from "../components/wizard/CycleGauge";
 import ProcessingOverlay from "../components/wizard/ProcessingOverlay";
 
-const STEP_LABELS = ["Current", "Pickup", "Dropoff", "Cycle Hours"];
+const STEP_LABELS = ["Current", "Pickup", "Dropoff", "Cycle Hours", "Log Details"];
+
+function LogInput({ label, value, onChange, mono = false }) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-text-muted mb-1">{label}</span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`input w-full ${mono ? "font-mono" : ""}`}
+      />
+    </label>
+  );
+}
 
 function ProgressBar({ step }) {
   return (
@@ -43,6 +57,7 @@ export default function TripInputWizard() {
     currentStep,
     setLocation,
     setCycleHours,
+    setLogField,
     nextStep,
     prevStep,
     submitTrip,
@@ -54,7 +69,8 @@ export default function TripInputWizard() {
     (currentStep === 1 && inputs.current) ||
     (currentStep === 2 && inputs.pickup) ||
     (currentStep === 3 && inputs.dropoff) ||
-    currentStep === 4;
+    currentStep === 4 ||
+    currentStep === 5;
 
   async function handleSubmit() {
     setProcessing(true);
@@ -164,6 +180,39 @@ export default function TripInputWizard() {
           </div>
         )}
 
+        {currentStep === 5 && (
+          <div className="space-y-5">
+            <div>
+              <h2 className="font-display text-2xl font-semibold">Log sheet details</h2>
+              <p className="text-sm text-text-muted mt-1">
+                Optional — these show up in the FMCSA header of your printed daily log.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <LogInput label="Co-driver name" value={inputs.coDriver}
+                onChange={(v) => setLogField("coDriver", v)} />
+              <LogInput label="Truck number" value={inputs.truckNumber} mono
+                onChange={(v) => setLogField("truckNumber", v)} />
+              <LogInput label="Trailer number" value={inputs.trailerNumber} mono
+                onChange={(v) => setLogField("trailerNumber", v)} />
+              <LogInput label="License plate" value={inputs.licensePlate} mono
+                onChange={(v) => setLogField("licensePlate", v)} />
+              <LogInput label="BOL / shipping doc #" value={inputs.bolNumber} mono
+                onChange={(v) => setLogField("bolNumber", v)} />
+              <LogInput label="Shipper" value={inputs.shipper}
+                onChange={(v) => setLogField("shipper", v)} />
+              <LogInput label="Commodity" value={inputs.commodity}
+                onChange={(v) => setLogField("commodity", v)} />
+              <LogInput label="Main office address" value={inputs.mainOfficeAddress}
+                onChange={(v) => setLogField("mainOfficeAddress", v)} />
+              <div className="sm:col-span-2">
+                <LogInput label="Home terminal address" value={inputs.homeTerminalAddress}
+                  onChange={(v) => setLogField("homeTerminalAddress", v)} />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-8">
           <button
             onClick={prevStep}
@@ -172,7 +221,7 @@ export default function TripInputWizard() {
           >
             ← Back
           </button>
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <button onClick={nextStep} disabled={!canAdvance} className="btn-primary">
               Next →
             </button>

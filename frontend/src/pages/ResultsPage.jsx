@@ -4,6 +4,7 @@ import { useTripStore } from "../store/tripStore";
 import TripSummaryCard from "../components/results/TripSummaryCard";
 import StopTimeline from "../components/results/StopTimeline";
 import RouteMap from "../components/results/RouteMap";
+import EventEditor from "../components/results/EventEditor";
 
 export default function ResultsPage() {
   const navigate = useNavigate();
@@ -56,8 +57,11 @@ export default function ResultsPage() {
             📋 View Log Sheets
           </button>
         </aside>
-        <section className="flex-1 min-h-[420px] lg:min-h-[calc(100vh-120px)] rounded-xl overflow-hidden border border-border lg:sticky lg:top-[72px]">
-          <RouteMap geometry={tripData.route_geometry} stops={tripData.stops} />
+        <section className="flex-1 space-y-5">
+          <div className="min-h-[420px] lg:h-[calc(100vh-220px)] rounded-xl overflow-hidden border border-border">
+            <RouteMap geometry={tripData.route_geometry} stops={tripData.stops} />
+          </div>
+          <EventEditor />
         </section>
       </div>
     </div>

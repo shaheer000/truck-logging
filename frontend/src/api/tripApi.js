@@ -39,12 +39,26 @@ export async function confirmTrip(id) {
   return data;
 }
 
+export async function editTripEvents(id, sheets) {
+  const { data } = await client.post(`/trip/${id}/edit-events/`, { sheets });
+  return data;
+}
+
 export async function calculateTrip(inputs) {
   const { data } = await client.post("/trip/calculate/", {
     current_location: inputs.current,
     pickup_location: inputs.pickup,
     dropoff_location: inputs.dropoff,
     cycle_used_hours: inputs.cycleUsedHours,
+    co_driver: inputs.coDriver || "",
+    truck_number: inputs.truckNumber || "",
+    trailer_number: inputs.trailerNumber || "",
+    license_plate: inputs.licensePlate || "",
+    bol_number: inputs.bolNumber || "",
+    shipper: inputs.shipper || "",
+    commodity: inputs.commodity || "",
+    main_office_address: inputs.mainOfficeAddress || "",
+    home_terminal_address: inputs.homeTerminalAddress || "",
   });
   return data;
 }
